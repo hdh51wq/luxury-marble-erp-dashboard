@@ -1,13 +1,28 @@
+import { MongoClient } from 'mongodb';
 
-import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
-import * as schema from '@/db/schema';
+if (!process.env.MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
 
-const client = createClient({
-  url: process.env.TURSO_CONNECTION_URL!,
-  authToken: process.env.TURSO_AUTH_TOKEN!,
-});
+const uri = process.env.MONGODB_URI;
+const options = {};
 
-export const db = drizzle(client, { schema });
+let client;
+let clientPromise: Promise<MongoClient>;
 
-export type Database = typeof db;
+if (process.env.NODE_ENV === 'development') {
+  let globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>;
+  };
+
+  if (!globalWithMongo._mongoClientPromise) {
+    client = new MongoClient(uri, options);
+    globalWithMongo._mongoClientPromise = client.connect();
+  }
+  clientPromise = globalWithMongo._mongoClientPromise;
+} else {
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
+}
+
+export { clientPromise };
