@@ -1,3 +1,4 @@
+
 import { defineConfig } from 'drizzle-kit';
 import type { Config } from 'drizzle-kit';
 
