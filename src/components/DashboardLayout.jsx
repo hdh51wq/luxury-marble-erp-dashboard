@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   LayoutDashboard, 
@@ -25,21 +25,44 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { authClient, useSession } from '@/lib/auth-client'
 import { toast } from 'sonner'
 
-const navigation = [
-  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
-  { id: 'inventory', name: 'Inventory', icon: Package },
-  { id: 'production', name: 'Production', icon: Activity },
-  { id: 'employees', name: 'Employees', icon: Users },
-  { id: 'sales', name: 'Sales & Clients', icon: DollarSign },
-  { id: 'analytics', name: 'Analytics', icon: TrendingUp },
-  { id: 'settings', name: 'Settings', icon: Settings },
+const allNavigation = [
+  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['admin'] },
+  { id: 'inventory', name: 'Inventory', icon: Package, allowedRoles: ['admin', 'stock'] },
+  { id: 'production', name: 'Production', icon: Activity, allowedRoles: ['admin', 'production'] },
+  { id: 'employees', name: 'Employees', icon: Users, allowedRoles: ['admin'] },
+  { id: 'sales', name: 'Sales & Clients', icon: DollarSign, allowedRoles: ['admin', 'ventes'] },
+  { id: 'analytics', name: 'Analytics', icon: TrendingUp, allowedRoles: ['admin'] },
+  { id: 'settings', name: 'Settings', icon: Settings, allowedRoles: ['admin'] },
 ]
 
 export default function DashboardLayout({ children, activeTab, onTabChange }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  const [employeeRole, setEmployeeRole] = useState(null)
   const { data: session, refetch } = useSession()
   const router = useRouter()
+
+  useEffect(() => {
+    // Check if user is logged in as employee
+    const role = localStorage.getItem('employee_role')
+    setEmployeeRole(role)
+    
+    // If employee has specific role, redirect to their allowed page
+    if (role && role !== 'admin' && role !== 'employe') {
+      const defaultPage = role === 'stock' ? 'inventory' 
+                        : role === 'production' ? 'production'
+                        : role === 'ventes' ? 'sales'
+                        : 'dashboard'
+      if (activeTab !== defaultPage) {
+        onTabChange(defaultPage)
+      }
+    }
+  }, [])
+
+  // Filter navigation based on role
+  const navigation = employeeRole 
+    ? allNavigation.filter(item => item.allowedRoles.includes(employeeRole))
+    : allNavigation.filter(item => item.allowedRoles.includes('admin'))
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode)
@@ -47,16 +70,32 @@ export default function DashboardLayout({ children, activeTab, onTabChange }) {
   }
 
   const handleSignOut = async () => {
-    const { error } = await authClient.signOut()
-    if (error?.code) {
-      toast.error(error.code)
+    // Check if employee is logged in
+    const employeeData = localStorage.getItem('employee_data')
+    
+    if (employeeData) {
+      // Employee logout
+      localStorage.removeItem('employee_role')
+      localStorage.removeItem('employee_data')
+      router.push('/employee-login')
+      toast.success("Déconnexion réussie")
     } else {
-      localStorage.removeItem("bearer_token")
-      refetch()
-      router.push("/sign-in")
-      toast.success("Signed out successfully")
+      // Admin logout
+      const { error } = await authClient.signOut()
+      if (error?.code) {
+        toast.error(error.code)
+      } else {
+        localStorage.removeItem("bearer_token")
+        refetch()
+        router.push("/sign-in")
+        toast.success("Signed out successfully")
+      }
     }
   }
+
+  // Get user data (admin or employee)
+  const employeeData = employeeRole ? JSON.parse(localStorage.getItem('employee_data') || '{}') : null
+  const currentUser = employeeData || session?.user
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
@@ -111,6 +150,16 @@ export default function DashboardLayout({ children, activeTab, onTabChange }) {
               )
             })}
           </nav>
+
+          {/* Role Badge (for employees) */}
+          {sidebarOpen && employeeRole && employeeRole !== 'admin' && (
+            <div className="px-3 py-2 border-t border-sidebar-border">
+              <div className="px-3 py-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                <p className="text-xs text-muted-foreground">Rôle</p>
+                <p className="text-sm font-semibold text-foreground capitalize">{employeeRole}</p>
+              </div>
+            </div>
+          )}
 
           {/* Collapse Button */}
           {!sidebarOpen && (
@@ -173,12 +222,12 @@ export default function DashboardLayout({ children, activeTab, onTabChange }) {
             {/* User Profile */}
             <div className="flex items-center space-x-3 pl-3 border-l border-border">
               <div className="text-right">
-                <div className="text-sm font-medium">{session?.user?.name || 'User'}</div>
-                <div className="text-xs text-muted-foreground">{session?.user?.email || ''}</div>
+                <div className="text-sm font-medium">{currentUser?.name || 'User'}</div>
+                <div className="text-xs text-muted-foreground">{currentUser?.email || ''}</div>
               </div>
               <Avatar className="w-10 h-10 ring-2 ring-orange-500">
-                <AvatarImage src={session?.user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session?.user?.email}`} />
-                <AvatarFallback>{session?.user?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                <AvatarImage src={currentUser?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.email}`} />
+                <AvatarFallback>{currentUser?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
               </Avatar>
               
               {/* Logout Button */}
