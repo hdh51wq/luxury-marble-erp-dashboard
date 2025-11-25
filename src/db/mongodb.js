@@ -20,9 +20,6 @@ export async function connectToDatabase() {
     maxPoolSize: 10,
     minPoolSize: 2,
     serverSelectionTimeoutMS: 10000,
-    tls: true,
-    tlsAllowInvalidCertificates: false,
-    tlsAllowInvalidHostnames: false,
   });
 
   await client.connect();

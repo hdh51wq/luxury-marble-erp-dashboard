@@ -1,7 +1,6 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { bearer } from "better-auth/plugins";
-import { headers } from "next/headers";
 import { getMongoDb, getMongoClient } from "@/db/mongodb";
 
 let authInstance = null;
@@ -28,6 +27,7 @@ async function getAuthInstance() {
         maxAge: 5 * 60, // 5 minutes cache
       },
     },
+    trustedOrigins: [process.env.NEXT_PUBLIC_SITE_URL, "http://localhost:3000"],
   });
 
   return authInstance;
@@ -55,6 +55,8 @@ export const auth = {
 // Session validation helper
 export async function getCurrentUser(request) {
   const instance = await getAuthInstance();
-  const session = await instance.api.getSession({ headers: await headers() });
+  const session = await instance.api.getSession({ 
+    headers: request?.headers 
+  });
   return session?.user || null;
 }
