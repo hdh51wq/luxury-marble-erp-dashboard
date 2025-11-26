@@ -41,16 +41,23 @@ export default function Employees() {
     setEmployees([...employees, newEmployee])
   }
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.role.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredEmployees = employees.filter(emp => {
+    // Skip undefined or null employees
+    if (!emp) return false
+    
+    // Safely check each property with default empty strings
+    const name = (emp.name || '').toLowerCase()
+    const email = (emp.email || '').toLowerCase()
+    const role = (emp.role || '').toLowerCase()
+    const query = (searchQuery || '').toLowerCase()
+    
+    return name.includes(query) || email.includes(query) || role.includes(query)
+  })
 
   const performanceData = filteredEmployees
     .slice(0, 6)
     .map(emp => ({
-      name: emp.name.split(' ')[0],
+      name: emp.name?.split(' ')[0] || 'N/A',
       value: emp.performance || 90
     }))
 
