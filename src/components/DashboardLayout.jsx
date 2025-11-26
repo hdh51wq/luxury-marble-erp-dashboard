@@ -26,12 +26,12 @@ import { authClient, useSession } from '@/lib/auth-client'
 import { toast } from 'sonner'
 
 const allNavigation = [
-  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['admin'] },
+  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['admin', 'ventes', 'production', 'employe'] },
   { id: 'inventory', name: 'Inventory', icon: Package, allowedRoles: ['admin', 'stock'] },
   { id: 'production', name: 'Production', icon: Activity, allowedRoles: ['admin', 'production'] },
   { id: 'employees', name: 'Employees', icon: Users, allowedRoles: ['admin'] },
   { id: 'sales', name: 'Sales & Clients', icon: DollarSign, allowedRoles: ['admin', 'ventes'] },
-  { id: 'analytics', name: 'Analytics', icon: TrendingUp, allowedRoles: ['admin'] },
+  { id: 'analytics', name: 'Analytics', icon: TrendingUp, allowedRoles: ['admin', 'ventes', 'production', 'employe'] },
   { id: 'settings', name: 'Settings', icon: Settings, allowedRoles: ['admin'] },
 ]
 
@@ -47,17 +47,20 @@ export default function DashboardLayout({ children, activeTab, onTabChange }) {
     const role = localStorage.getItem('employee_role')
     setEmployeeRole(role)
     
-    // If employee has specific role, redirect to their allowed page
-    if (role && role !== 'admin' && role !== 'employe') {
+    // If employee has specific role, redirect to their default page if needed
+    if (role && role !== 'admin') {
       const defaultPage = role === 'stock' ? 'inventory' 
                         : role === 'production' ? 'production'
                         : role === 'ventes' ? 'sales'
-                        : 'dashboard'
-      if (activeTab !== defaultPage) {
+                        : 'dashboard' // For 'employe' role
+      
+      // Check if current page is accessible for this role
+      const currentNavItem = allNavigation.find(item => item.id === activeTab)
+      if (currentNavItem && !currentNavItem.allowedRoles.includes(role)) {
         onTabChange(defaultPage)
       }
     }
-  }, [])
+  }, [activeTab])
 
   // Filter navigation based on role
   const navigation = employeeRole 

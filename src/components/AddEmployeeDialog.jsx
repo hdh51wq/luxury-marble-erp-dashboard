@@ -87,6 +87,23 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
     }
   }
 
+  const getRoleDescription = (role) => {
+    switch(role) {
+      case 'stock':
+        return '→ Accès uniquement à la page Stock/Inventory'
+      case 'production':
+        return '→ Accès à Production, Dashboard et Analytics'
+      case 'ventes':
+        return '→ Accès à Sales & Clients, Dashboard et Analytics'
+      case 'employe':
+        return '→ Accès à Dashboard et Analytics'
+      case 'admin':
+        return '→ Accès complet à toutes les sections'
+      default:
+        return ''
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -160,20 +177,18 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
                 <SelectValue placeholder="Sélectionner un rôle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="stock">Stock</SelectItem>
-                <SelectItem value="production">Production</SelectItem>
-                <SelectItem value="ventes">Ventes</SelectItem>
+                <SelectItem value="stock">Responsable Stock</SelectItem>
+                <SelectItem value="production">Responsable Production</SelectItem>
+                <SelectItem value="ventes">Responsable Ventes</SelectItem>
                 <SelectItem value="employe">Employé</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              {formData.role === 'stock' && '→ Accès au tableau de bord Stock uniquement'}
-              {formData.role === 'production' && '→ Accès au tableau de bord Production uniquement'}
-              {formData.role === 'ventes' && '→ Accès au tableau de bord Ventes uniquement'}
-              {formData.role === 'employe' && '→ Accès limité'}
-              {formData.role === 'admin' && '→ Accès complet à toutes les sections'}
-            </p>
+            {formData.role && (
+              <p className="text-xs text-muted-foreground">
+                {getRoleDescription(formData.role)}
+              </p>
+            )}
           </div>
 
           {/* Submit Button */}
