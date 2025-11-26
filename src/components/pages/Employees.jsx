@@ -24,7 +24,8 @@ export default function Employees() {
         throw new Error(data.error || 'Failed to fetch employees')
       }
       
-      setEmployees(data.employees || [])
+      // Data is already an array from Drizzle route
+      setEmployees(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast.error('Erreur lors du chargement des employés')
@@ -58,7 +59,7 @@ export default function Employees() {
     .slice(0, 6)
     .map(emp => ({
       name: emp.name?.split(' ')[0] || 'N/A',
-      value: emp.performance || 90
+      value: emp.performanceScore || 90
     }))
 
   if (loading) {
@@ -88,19 +89,19 @@ export default function Employees() {
         </Card>
         <Card className="p-6 glass-panel premium-shadow">
           <div className="text-3xl font-bold text-green-500 mb-1">
-            {employees.filter(e => e && e.status === 'active').length}
+            {employees.length}
           </div>
           <div className="text-sm text-muted-foreground">Active</div>
         </Card>
         <Card className="p-6 glass-panel premium-shadow">
           <div className="text-3xl font-bold text-orange-500 mb-1">
-            {employees.length > 0 ? Math.round(employees.filter(e => e).reduce((acc, e) => acc + (e.hoursWorked || 0), 0) / employees.length) : 0}
+            {employees.length > 0 ? Math.round(employees.filter(e => e).reduce((acc, e) => acc + (e.workingHours || 0), 0) / employees.length) : 0}
           </div>
           <div className="text-sm text-muted-foreground">Avg. Hours/Month</div>
         </Card>
         <Card className="p-6 glass-panel premium-shadow">
           <div className="text-3xl font-bold text-foreground mb-1">
-            {employees.length > 0 ? Math.round(employees.filter(e => e).reduce((acc, e) => acc + (e.performance || 90), 0) / employees.length) : 0}%
+            {employees.length > 0 ? Math.round(employees.filter(e => e).reduce((acc, e) => acc + (e.performanceScore || 90), 0) / employees.length) : 0}%
           </div>
           <div className="text-sm text-muted-foreground">Avg. Performance</div>
         </Card>
@@ -128,23 +129,17 @@ export default function Employees() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredEmployees.map((employee) => (
-            <Card key={employee._id} className="p-6 glass-panel premium-shadow hover:scale-105 transition-transform duration-300">
+            <Card key={employee.id} className="p-6 glass-panel premium-shadow hover:scale-105 transition-transform duration-300">
               <div className="flex items-start space-x-4 mb-4">
                 <Avatar className="w-16 h-16 ring-2 ring-orange-500">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.email}`} />
+                  <AvatarImage src={employee.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.email}`} />
                   <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground mb-1">{employee.name}</h3>
                   <p className="text-sm text-muted-foreground mb-2 capitalize">{employee.role}</p>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    employee.status === 'active' 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                      : employee.status === 'vacation'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                  }`}>
-                    {employee.status}
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                    active
                   </span>
                 </div>
               </div>
@@ -156,7 +151,7 @@ export default function Employees() {
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
-                  {employee.phone || 'N/A'}
+                  N/A
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -168,18 +163,18 @@ export default function Employees() {
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="text-muted-foreground">Performance</span>
-                    <span className="font-semibold text-foreground">{employee.performance || 90}%</span>
+                    <span className="font-semibold text-foreground">{employee.performanceScore || 90}%</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                     <div 
                       className="h-full gradient-orange transition-all duration-500"
-                      style={{ width: `${employee.performance || 90}%` }}
+                      style={{ width: `${employee.performanceScore || 90}%` }}
                     />
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Hours This Month</span>
-                  <span className="font-semibold text-foreground">{employee.hoursWorked || 0}h</span>
+                  <span className="font-semibold text-foreground">{employee.workingHours || 0}h</span>
                 </div>
               </div>
             </Card>

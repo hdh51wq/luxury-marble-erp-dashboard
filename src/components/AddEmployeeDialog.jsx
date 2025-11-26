@@ -59,7 +59,10 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
       }
 
       const requestBody = {
-        ...formData,
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
         department: departmentMap[formData.role] || 'General'
       }
 
@@ -89,9 +92,9 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
       
       setOpen(false)
       
-      // Notify parent component
+      // Notify parent component - API returns employee directly, not wrapped
       if (onEmployeeAdded) {
-        onEmployeeAdded(data.employee)
+        onEmployeeAdded(data)
       }
     } catch (error) {
       console.error('Error creating employee:', error)
