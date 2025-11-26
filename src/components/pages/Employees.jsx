@@ -88,19 +88,19 @@ export default function Employees() {
         </Card>
         <Card className="p-6 glass-panel premium-shadow">
           <div className="text-3xl font-bold text-green-500 mb-1">
-            {employees.filter(e => e.status === 'active').length}
+            {employees.filter(e => e && e.status === 'active').length}
           </div>
           <div className="text-sm text-muted-foreground">Active</div>
         </Card>
         <Card className="p-6 glass-panel premium-shadow">
           <div className="text-3xl font-bold text-orange-500 mb-1">
-            {employees.length > 0 ? Math.round(employees.reduce((acc, e) => acc + (e.hoursWorked || 0), 0) / employees.length) : 0}
+            {employees.length > 0 ? Math.round(employees.filter(e => e).reduce((acc, e) => acc + (e.hoursWorked || 0), 0) / employees.length) : 0}
           </div>
           <div className="text-sm text-muted-foreground">Avg. Hours/Month</div>
         </Card>
         <Card className="p-6 glass-panel premium-shadow">
           <div className="text-3xl font-bold text-foreground mb-1">
-            {employees.length > 0 ? Math.round(employees.reduce((acc, e) => acc + (e.performance || 90), 0) / employees.length) : 0}%
+            {employees.length > 0 ? Math.round(employees.filter(e => e).reduce((acc, e) => acc + (e.performance || 90), 0) / employees.length) : 0}%
           </div>
           <div className="text-sm text-muted-foreground">Avg. Performance</div>
         </Card>
