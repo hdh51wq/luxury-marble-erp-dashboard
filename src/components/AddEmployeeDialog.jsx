@@ -49,12 +49,26 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
     setLoading(true)
 
     try {
+      // Map role to department
+      const departmentMap = {
+        stock: 'Stock',
+        production: 'Production',
+        ventes: 'Sales',
+        employe: 'General',
+        admin: 'Administration'
+      }
+
+      const requestBody = {
+        ...formData,
+        department: departmentMap[formData.role] || 'General'
+      }
+
       const response = await fetch('/api/employees', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(requestBody)
       })
 
       const data = await response.json()
