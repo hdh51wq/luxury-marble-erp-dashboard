@@ -31,18 +31,29 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100);
     const offset = parseInt(searchParams.get('offset') ?? '0');
     const search = searchParams.get('search');
+    const statusFilter = searchParams.get('status');
 
     let query = db.select().from(clients);
 
+    const conditions: any[] = [];
+
     if (search) {
-      query = query.where(
+      conditions.push(
         or(
           like(clients.name, `%${search}%`),
           like(clients.company, `%${search}%`),
           like(clients.email, `%${search}%`),
           like(clients.phone, `%${search}%`)
         )
-      ) as any;
+      );
+    }
+
+    if (statusFilter) {
+      conditions.push(eq(clients.status, statusFilter));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(or(...conditions)) as any;
     }
 
     const results = await query
@@ -61,7 +72,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, company, email, phone, totalProjects, totalRevenue } = body;
+    const { name, company, email, phone, address, status, totalProjects, totalRevenue } = body;
 
     if (!name) {
       return NextResponse.json({ 
@@ -116,6 +127,8 @@ export async function POST(request: NextRequest) {
         company: company.trim(),
         email: email.toLowerCase().trim(),
         phone: phone.trim(),
+        address: address?.trim() || null,
+        status: status?.trim() || 'active',
         totalProjects: totalProjects ?? 0,
         totalRevenue: totalRevenue ?? 0,
         createdAt: new Date().toISOString()
@@ -159,7 +172,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, company, email, phone, totalProjects, totalRevenue } = body;
+    const { name, company, email, phone, address, status, totalProjects, totalRevenue } = body;
 
     if (email && !email.includes('@')) {
       return NextResponse.json({ 
@@ -188,6 +201,8 @@ export async function PUT(request: NextRequest) {
     if (company !== undefined) updates.company = company.trim();
     if (email !== undefined) updates.email = email.toLowerCase().trim();
     if (phone !== undefined) updates.phone = phone.trim();
+    if (address !== undefined) updates.address = address?.trim() || null;
+    if (status !== undefined) updates.status = status.trim();
     if (totalProjects !== undefined) updates.totalProjects = totalProjects;
     if (totalRevenue !== undefined) updates.totalRevenue = totalRevenue;
 

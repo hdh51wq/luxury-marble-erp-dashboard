@@ -90,6 +90,8 @@ export const clients = sqliteTable('clients', {
   company: text('company').notNull(),
   email: text('email').notNull().unique(),
   phone: text('phone').notNull(),
+  address: text('address'),
+  status: text('status').notNull().default('active'),
   totalProjects: integer('total_projects').default(0),
   totalRevenue: integer('total_revenue').default(0),
   createdAt: text('created_at').notNull(),
@@ -102,5 +104,25 @@ export const sales = sqliteTable('sales', {
   amount: integer('amount').notNull(),
   status: text('status').notNull(),
   paymentStatus: text('payment_status').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+// New tables
+export const projects = sqliteTable('projects', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  clientId: integer('client_id').notNull().references(() => clients.id),
+  budget: integer('budget').notNull(),
+  dueDate: text('due_date').notNull(),
+  status: text('status').notNull(),
+  progress: integer('progress').notNull().default(0),
+  createdAt: text('created_at').notNull(),
+});
+
+export const clientNotes = sqliteTable('client_notes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  clientId: integer('client_id').notNull().references(() => clients.id),
+  content: text('content').notNull(),
+  type: text('type').notNull(),
   createdAt: text('created_at').notNull(),
 });
