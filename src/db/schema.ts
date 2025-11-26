@@ -1,48 +1,106 @@
 import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
-// Better Auth Tables - Required for authentication
+// Better Auth tables
 export const user = sqliteTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull(),
   image: text('image'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });
 
 export const session = sqliteTable('session', {
   id: text('id').primaryKey(),
-  expiresAt: text('expires_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
   token: text('token').notNull().unique(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id),
 });
 
 export const account = sqliteTable('account', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
-  accessTokenExpiresAt: text('access_token_expires_at'),
-  refreshTokenExpiresAt: text('refresh_token_expires_at'),
+  accessTokenExpiresAt: integer('access_token_expires_at'),
+  refreshTokenExpiresAt: integer('refresh_token_expires_at'),
   scope: text('scope'),
   password: text('password'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });
 
 export const verification = sqliteTable('verification', {
   id: text('id').primaryKey(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
-  expiresAt: text('expires_at').notNull(),
-  createdAt: text('created_at'),
-  updatedAt: text('updated_at'),
+  expiresAt: integer('expires_at').notNull(),
+  createdAt: integer('created_at'),
+  updatedAt: integer('updated_at'),
+});
+
+// ERP Application Tables
+export const employees = sqliteTable('employees', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  password: text('password').notNull(),
+  department: text('department').notNull(),
+  role: text('role').notNull(),
+  workingHours: integer('working_hours').default(0),
+  performanceScore: integer('performance_score').default(0),
+  avatar: text('avatar'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const marbleInventory = sqliteTable('marble_inventory', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  marbleType: text('marble_type').notNull(),
+  size: text('size').notNull(),
+  quality: text('quality').notNull(),
+  quantity: integer('quantity').notNull(),
+  pricePerUnit: integer('price_per_unit').notNull(),
+  location: text('location').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const productionOrders = sqliteTable('production_orders', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  orderId: text('order_id').notNull().unique(),
+  stage: text('stage').notNull(),
+  progress: integer('progress').notNull().default(0),
+  assignedEmployee: text('assigned_employee'),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date'),
+  status: text('status').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const clients = sqliteTable('clients', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  company: text('company').notNull(),
+  email: text('email').notNull().unique(),
+  phone: text('phone').notNull(),
+  totalProjects: integer('total_projects').default(0),
+  totalRevenue: integer('total_revenue').default(0),
+  createdAt: text('created_at').notNull(),
+});
+
+export const sales = sqliteTable('sales', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  clientId: integer('client_id').notNull().references(() => clients.id),
+  projectName: text('project_name').notNull(),
+  amount: integer('amount').notNull(),
+  status: text('status').notNull(),
+  paymentStatus: text('payment_status').notNull(),
+  createdAt: text('created_at').notNull(),
 });
