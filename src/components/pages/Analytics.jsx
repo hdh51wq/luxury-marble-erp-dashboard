@@ -1,8 +1,14 @@
 "use client"
 
+import { useState } from 'react'
 import { Card } from '@/components/ui/card'
-import { TrendingUp, TrendingDown, DollarSign, Package, Users, Activity } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { TrendingUp, TrendingDown, DollarSign, Package, Users, Activity, Pencil } from 'lucide-react'
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { toast } from 'sonner'
 
 const monthlyData = [
   { month: 'Jul', sales: 320, production: 280, revenue: 420 },
@@ -39,6 +45,64 @@ const efficiencyData = [
 ]
 
 export default function Analytics() {
+  const [editDialog, setEditDialog] = useState({ open: false, type: null, data: {} })
+  
+  // State for editable metrics
+  const [metrics, setMetrics] = useState({
+    monthlySales: { value: 542, change: 18.7 },
+    productionOutput: { value: 510, change: 12.3 },
+    wasteReduction: { value: 4.8, change: -3.7 },
+    customerGrowth: { value: 24, change: 15.2 },
+    topProduct: { name: 'Carrara White', percentage: 35 },
+    averageOrder: { value: 12450, change: 8.3 },
+    satisfaction: { rating: 4.8, reviews: 127 }
+  })
+
+  const openEditDialog = (type) => {
+    let data = {}
+    switch(type) {
+      case 'monthlySales':
+        data = { value: metrics.monthlySales.value, change: metrics.monthlySales.change }
+        break
+      case 'productionOutput':
+        data = { value: metrics.productionOutput.value, change: metrics.productionOutput.change }
+        break
+      case 'wasteReduction':
+        data = { value: metrics.wasteReduction.value, change: metrics.wasteReduction.change }
+        break
+      case 'customerGrowth':
+        data = { value: metrics.customerGrowth.value, change: metrics.customerGrowth.change }
+        break
+      case 'topProduct':
+        data = { name: metrics.topProduct.name, percentage: metrics.topProduct.percentage }
+        break
+      case 'averageOrder':
+        data = { value: metrics.averageOrder.value, change: metrics.averageOrder.change }
+        break
+      case 'satisfaction':
+        data = { rating: metrics.satisfaction.rating, reviews: metrics.satisfaction.reviews }
+        break
+    }
+    setEditDialog({ open: true, type, data })
+  }
+
+  const handleSave = () => {
+    const { type, data } = editDialog
+    setMetrics(prev => ({
+      ...prev,
+      [type]: data
+    }))
+    setEditDialog({ open: false, type: null, data: {} })
+    toast.success("Metric updated successfully!")
+  }
+
+  const updateDialogData = (field, value) => {
+    setEditDialog(prev => ({
+      ...prev,
+      data: { ...prev.data, [field]: value }
+    }))
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -49,16 +113,30 @@ export default function Analytics() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('monthlySales')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-1">Monthly Sales</p>
               <div className="flex items-baseline space-x-2 mb-2">
-                <h3 className="text-3xl font-bold text-foreground">€542K</h3>
+                <h3 className="text-3xl font-bold text-foreground">€{metrics.monthlySales.value}K</h3>
               </div>
               <div className="flex items-center space-x-1">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-green-500">+18.7%</span>
+                {metrics.monthlySales.change >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500" />
+                )}
+                <span className={`text-sm font-medium ${metrics.monthlySales.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {metrics.monthlySales.change >= 0 ? '+' : ''}{metrics.monthlySales.change}%
+                </span>
                 <span className="text-xs text-muted-foreground">vs last month</span>
               </div>
             </div>
@@ -68,17 +146,31 @@ export default function Analytics() {
           </div>
         </Card>
 
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('productionOutput')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-1">Production Output</p>
               <div className="flex items-baseline space-x-2 mb-2">
-                <h3 className="text-3xl font-bold text-foreground">510</h3>
+                <h3 className="text-3xl font-bold text-foreground">{metrics.productionOutput.value}</h3>
                 <span className="text-sm text-muted-foreground">units</span>
               </div>
               <div className="flex items-center space-x-1">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-green-500">+12.3%</span>
+                {metrics.productionOutput.change >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500" />
+                )}
+                <span className={`text-sm font-medium ${metrics.productionOutput.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {metrics.productionOutput.change >= 0 ? '+' : ''}{metrics.productionOutput.change}%
+                </span>
                 <span className="text-xs text-muted-foreground">vs last month</span>
               </div>
             </div>
@@ -88,16 +180,26 @@ export default function Analytics() {
           </div>
         </Card>
 
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('wasteReduction')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-1">Waste Reduction</p>
               <div className="flex items-baseline space-x-2 mb-2">
-                <h3 className="text-3xl font-bold text-foreground">4.8%</h3>
+                <h3 className="text-3xl font-bold text-foreground">{metrics.wasteReduction.value}%</h3>
               </div>
               <div className="flex items-center space-x-1">
                 <TrendingDown className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-green-500">-3.7%</span>
+                <span className="text-sm font-medium text-green-500">
+                  {metrics.wasteReduction.change}%
+                </span>
                 <span className="text-xs text-muted-foreground">vs last month</span>
               </div>
             </div>
@@ -107,17 +209,31 @@ export default function Analytics() {
           </div>
         </Card>
 
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('customerGrowth')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-1">Customer Growth</p>
               <div className="flex items-baseline space-x-2 mb-2">
-                <h3 className="text-3xl font-bold text-foreground">+24</h3>
+                <h3 className="text-3xl font-bold text-foreground">+{metrics.customerGrowth.value}</h3>
                 <span className="text-sm text-muted-foreground">clients</span>
               </div>
               <div className="flex items-center space-x-1">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-green-500">+15.2%</span>
+                {metrics.customerGrowth.change >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500" />
+                )}
+                <span className={`text-sm font-medium ${metrics.customerGrowth.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {metrics.customerGrowth.change >= 0 ? '+' : ''}{metrics.customerGrowth.change}%
+                </span>
                 <span className="text-xs text-muted-foreground">vs last month</span>
               </div>
             </div>
@@ -211,36 +327,259 @@ export default function Analytics() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('topProduct')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <h3 className="text-sm font-semibold text-muted-foreground mb-4">Top Performing Product</h3>
-          <div className="text-2xl font-bold text-foreground mb-2">Carrara White</div>
-          <div className="text-sm text-muted-foreground">35% of total sales</div>
+          <div className="text-2xl font-bold text-foreground mb-2">{metrics.topProduct.name}</div>
+          <div className="text-sm text-muted-foreground">{metrics.topProduct.percentage}% of total sales</div>
           <div className="mt-4 w-full bg-muted rounded-full h-2 overflow-hidden">
-            <div className="h-full gradient-orange" style={{ width: '35%' }} />
+            <div className="h-full gradient-orange" style={{ width: `${metrics.topProduct.percentage}%` }} />
           </div>
         </Card>
 
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('averageOrder')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <h3 className="text-sm font-semibold text-muted-foreground mb-4">Average Order Value</h3>
-          <div className="text-2xl font-bold text-foreground mb-2">€12,450</div>
+          <div className="text-2xl font-bold text-foreground mb-2">€{metrics.averageOrder.value.toLocaleString()}</div>
           <div className="flex items-center space-x-1">
-            <TrendingUp className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-medium text-green-500">+8.3%</span>
+            {metrics.averageOrder.change >= 0 ? (
+              <TrendingUp className="w-4 h-4 text-green-500" />
+            ) : (
+              <TrendingDown className="w-4 h-4 text-red-500" />
+            )}
+            <span className={`text-sm font-medium ${metrics.averageOrder.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {metrics.averageOrder.change >= 0 ? '+' : ''}{metrics.averageOrder.change}%
+            </span>
             <span className="text-xs text-muted-foreground">from last month</span>
           </div>
         </Card>
 
-        <Card className="p-6 glass-panel premium-shadow">
+        <Card className="p-6 glass-panel premium-shadow relative group">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => openEditDialog('satisfaction')}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
           <h3 className="text-sm font-semibold text-muted-foreground mb-4">Customer Satisfaction</h3>
-          <div className="text-2xl font-bold text-foreground mb-2">4.8/5.0</div>
-          <div className="text-sm text-muted-foreground">Based on 127 reviews</div>
+          <div className="text-2xl font-bold text-foreground mb-2">{metrics.satisfaction.rating}/5.0</div>
+          <div className="text-sm text-muted-foreground">Based on {metrics.satisfaction.reviews} reviews</div>
           <div className="mt-4 flex space-x-1">
             {[1, 2, 3, 4, 5].map((star) => (
-              <div key={star} className={`w-6 h-6 ${star <= 5 ? 'text-orange-500' : 'text-gray-300'}`}>★</div>
+              <div key={star} className={`w-6 h-6 ${star <= Math.round(metrics.satisfaction.rating) ? 'text-orange-500' : 'text-gray-300'}`}>★</div>
             ))}
           </div>
         </Card>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open, type: null, data: {} })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Metric</DialogTitle>
+            <DialogDescription>
+              Update the values for this metric
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {editDialog.type === 'monthlySales' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="value">Monthly Sales (K€)</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    value={editDialog.data.value || ''}
+                    onChange={(e) => updateDialogData('value', parseFloat(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="change">Change (%)</Label>
+                  <Input
+                    id="change"
+                    type="number"
+                    step="0.1"
+                    value={editDialog.data.change || ''}
+                    onChange={(e) => updateDialogData('change', parseFloat(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {editDialog.type === 'productionOutput' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="value">Production Output (units)</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    value={editDialog.data.value || ''}
+                    onChange={(e) => updateDialogData('value', parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="change">Change (%)</Label>
+                  <Input
+                    id="change"
+                    type="number"
+                    step="0.1"
+                    value={editDialog.data.change || ''}
+                    onChange={(e) => updateDialogData('change', parseFloat(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {editDialog.type === 'wasteReduction' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="value">Waste Reduction (%)</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    step="0.1"
+                    value={editDialog.data.value || ''}
+                    onChange={(e) => updateDialogData('value', parseFloat(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="change">Change (%)</Label>
+                  <Input
+                    id="change"
+                    type="number"
+                    step="0.1"
+                    value={editDialog.data.change || ''}
+                    onChange={(e) => updateDialogData('change', parseFloat(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {editDialog.type === 'customerGrowth' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="value">New Clients</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    value={editDialog.data.value || ''}
+                    onChange={(e) => updateDialogData('value', parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="change">Change (%)</Label>
+                  <Input
+                    id="change"
+                    type="number"
+                    step="0.1"
+                    value={editDialog.data.change || ''}
+                    onChange={(e) => updateDialogData('change', parseFloat(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {editDialog.type === 'topProduct' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Product Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={editDialog.data.name || ''}
+                    onChange={(e) => updateDialogData('name', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="percentage">Sales Percentage (%)</Label>
+                  <Input
+                    id="percentage"
+                    type="number"
+                    value={editDialog.data.percentage || ''}
+                    onChange={(e) => updateDialogData('percentage', parseInt(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {editDialog.type === 'averageOrder' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="value">Average Order Value (€)</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    value={editDialog.data.value || ''}
+                    onChange={(e) => updateDialogData('value', parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="change">Change (%)</Label>
+                  <Input
+                    id="change"
+                    type="number"
+                    step="0.1"
+                    value={editDialog.data.change || ''}
+                    onChange={(e) => updateDialogData('change', parseFloat(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {editDialog.type === 'satisfaction' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="rating">Customer Rating</Label>
+                  <Input
+                    id="rating"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={editDialog.data.rating || ''}
+                    onChange={(e) => updateDialogData('rating', parseFloat(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reviews">Number of Reviews</Label>
+                  <Input
+                    id="reviews"
+                    type="number"
+                    value={editDialog.data.reviews || ''}
+                    onChange={(e) => updateDialogData('reviews', parseInt(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, type: null, data: {} })}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
