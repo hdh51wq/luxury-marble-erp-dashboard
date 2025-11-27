@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, Info } from 'lucide-react'
 import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function AddEmployeeDialog({ onEmployeeAdded }) {
   const [open, setOpen] = useState(false)
@@ -80,7 +81,9 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
         throw new Error(data.error || 'Failed to create employee')
       }
 
-      toast.success('Employé ajouté avec succès')
+      toast.success('✅ Employé créé! Ils peuvent maintenant se connecter via /sign-in', {
+        duration: 5000,
+      })
       
       // Reset form
       setFormData({
@@ -92,7 +95,7 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
       
       setOpen(false)
       
-      // Notify parent component - API returns employee directly, not wrapped
+      // Notify parent component
       if (onEmployeeAdded) {
         onEmployeeAdded(data)
       }
@@ -136,8 +139,16 @@ export default function AddEmployeeDialog({ onEmployeeAdded }) {
             Créez un nouveau compte employé avec ses informations d'accès
           </DialogDescription>
         </DialogHeader>
+
+        {/* Unified Login Info */}
+        <Alert className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
+          <Info className="h-4 w-4 text-orange-500" />
+          <AlertDescription className="text-sm text-foreground">
+            L'employé pourra se connecter via <strong>/sign-in</strong> avec l'email et le mot de passe définis ici.
+          </AlertDescription>
+        </Alert>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name Field */}
           <div className="space-y-2">
             <Label htmlFor="name">Nom complet</Label>

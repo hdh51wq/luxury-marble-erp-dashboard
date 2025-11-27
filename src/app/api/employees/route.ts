@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { employees } from '@/db/schema';
+import { employees, user, account } from '@/db/schema';
 import { eq, like, or, and } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 // Helper function to exclude password from employee objects
 const excludePassword = (employee: any) => {
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     const sanitizedEmail = email.trim().toLowerCase();
     const sanitizedName = name.trim();
 
-    // Check if email already exists
+    // Check if email already exists in employees table
     const existingEmployee = await db
       .select()
       .from(employees)
@@ -134,10 +135,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if email already exists in user table
+    const existingUser = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, sanitizedEmail))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      return NextResponse.json(
+        { error: 'Email already exists in user system', code: 'EMAIL_EXISTS' },
+        { status: 400 }
+      );
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Prepare insert data
+    // Generate IDs for better-auth integration
+    const userId = crypto.randomUUID();
+    const accountId = crypto.randomUUID();
+    const now = Date.now();
+
+    // Create user record for better-auth
+    await db.insert(user).values({
+      id: userId,
+      name: sanitizedName,
+      email: sanitizedEmail,
+      emailVerified: true,
+      image: avatar?.trim() || null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create account record for better-auth
+    await db.insert(account).values({
+      id: accountId,
+      accountId: sanitizedEmail,
+      providerId: 'credential',
+      userId: userId,
+      accessToken: null,
+      refreshToken: null,
+      idToken: null,
+      accessTokenExpiresAt: null,
+      refreshTokenExpiresAt: null,
+      scope: null,
+      password: hashedPassword,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create employee record
     const insertData: any = {
       name: sanitizedName,
       email: sanitizedEmail,
@@ -150,7 +198,6 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    // Insert employee
     const newEmployee = await db.insert(employees).values(insertData).returning();
 
     return NextResponse.json(excludePassword(newEmployee[0]), { status: 201 });
@@ -194,9 +241,13 @@ export async function PUT(request: NextRequest) {
 
     // Prepare update data
     const updateData: any = {};
+    let needsUserUpdate = false;
+    let needsAccountUpdate = false;
+    let newHashedPassword: string | undefined;
 
     if (name !== undefined) {
       updateData.name = name.trim();
+      needsUserUpdate = true;
     }
 
     if (email !== undefined) {
@@ -225,11 +276,15 @@ export async function PUT(request: NextRequest) {
       }
 
       updateData.email = sanitizedEmail;
+      needsUserUpdate = true;
+      needsAccountUpdate = true;
     }
 
     if (password !== undefined) {
       // Hash new password
-      updateData.password = await bcrypt.hash(password, 10);
+      newHashedPassword = await bcrypt.hash(password, 10);
+      updateData.password = newHashedPassword;
+      needsAccountUpdate = true;
     }
 
     if (department !== undefined) {
@@ -250,6 +305,7 @@ export async function PUT(request: NextRequest) {
 
     if (avatar !== undefined) {
       updateData.avatar = avatar ? avatar.trim() : null;
+      needsUserUpdate = true;
     }
 
     // Check if there's anything to update
@@ -257,12 +313,64 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(excludePassword(existingEmployee[0]), { status: 200 });
     }
 
-    // Update employee
+    // Update employee record
     const updated = await db
       .update(employees)
       .set(updateData)
       .where(eq(employees.id, parseInt(id)))
       .returning();
+
+    // Update user record if needed
+    if (needsUserUpdate) {
+      const existingUser = await db
+        .select()
+        .from(user)
+        .where(eq(user.email, existingEmployee[0].email))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        const userUpdateData: any = {
+          updatedAt: Date.now(),
+        };
+
+        if (name !== undefined) {
+          userUpdateData.name = name.trim();
+        }
+
+        if (email !== undefined) {
+          userUpdateData.email = email.trim().toLowerCase();
+        }
+
+        if (avatar !== undefined) {
+          userUpdateData.image = avatar ? avatar.trim() : null;
+        }
+
+        await db
+          .update(user)
+          .set(userUpdateData)
+          .where(eq(user.id, existingUser[0].id));
+
+        // Update account record if email or password changed
+        if (needsAccountUpdate) {
+          const accountUpdateData: any = {
+            updatedAt: Date.now(),
+          };
+
+          if (email !== undefined) {
+            accountUpdateData.accountId = email.trim().toLowerCase();
+          }
+
+          if (newHashedPassword !== undefined) {
+            accountUpdateData.password = newHashedPassword;
+          }
+
+          await db
+            .update(account)
+            .set(accountUpdateData)
+            .where(eq(account.userId, existingUser[0].id));
+        }
+      }
+    }
 
     return NextResponse.json(excludePassword(updated[0]), { status: 200 });
   } catch (error: any) {
@@ -300,7 +408,27 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete employee
+    // Find corresponding user record by email
+    const existingUser = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, existingEmployee[0].email))
+      .limit(1);
+
+    // Delete from better-auth tables first (if exists)
+    if (existingUser.length > 0) {
+      // Delete account records
+      await db
+        .delete(account)
+        .where(eq(account.userId, existingUser[0].id));
+
+      // Delete user record
+      await db
+        .delete(user)
+        .where(eq(user.id, existingUser[0].id));
+    }
+
+    // Delete employee record
     const deleted = await db
       .delete(employees)
       .where(eq(employees.id, parseInt(id)))
