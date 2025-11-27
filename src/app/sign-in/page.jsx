@@ -26,20 +26,33 @@ export default function SignInPage() {
       const { data, error } = await authClient.signIn.email({
         email,
         password,
-        rememberMe,
-        callbackURL: "/"
+        rememberMe
       })
 
       if (error?.code) {
         toast.error("Invalid email or password. Please make sure you have registered an account and try again.")
+        setIsLoading(false)
+        return
+      }
+
+      // Wait a moment for the bearer token to be stored in localStorage
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Verify session is available before redirecting
+      const token = localStorage.getItem('bearer_token')
+      if (!token) {
+        toast.error("Authentication error. Please try again.")
+        setIsLoading(false)
         return
       }
 
       toast.success("Welcome back!")
-      router.push("/")
+      
+      // Force a full page reload to ensure session is properly loaded
+      window.location.href = "/"
     } catch (err) {
+      console.error('Sign-in error:', err)
       toast.error("An error occurred. Please try again.")
-    } finally {
       setIsLoading(false)
     }
   }

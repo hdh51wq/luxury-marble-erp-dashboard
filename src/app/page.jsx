@@ -22,11 +22,19 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!isPending && !session?.user) {
-      // No session - redirect to login
+    // Wait for session to load completely
+    if (isPending) {
+      return
+    }
+
+    // If no session after loading, redirect to login
+    if (!session?.user) {
+      console.log('No session found, redirecting to sign-in')
       router.push('/sign-in')
       return
     }
+
+    console.log('Session found:', session.user.email)
 
     // Fetch employee role from database using session email
     const fetchEmployeeRole = async () => {
@@ -37,6 +45,8 @@ export default function Home() {
 
       try {
         const token = localStorage.getItem('bearer_token')
+        console.log('Fetching employee role with token:', token ? 'exists' : 'missing')
+        
         const response = await fetch(`/api/employees?search=${encodeURIComponent(session.user.email)}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -45,8 +55,11 @@ export default function Home() {
 
         if (response.ok) {
           const employees = await response.json()
+          console.log('Employee data:', employees)
+          
           if (employees.length > 0) {
             const userRole = employees[0].role
+            console.log('User role:', userRole)
             setEmployeeRole(userRole)
             
             // Set default page based on role
@@ -63,8 +76,13 @@ export default function Home() {
             }
           } else {
             // User exists in auth but not in employees table - treat as admin
+            console.log('User not in employees table, treating as admin')
             setEmployeeRole('admin')
           }
+        } else {
+          console.error('Failed to fetch employee data:', response.status)
+          // Default to admin if error
+          setEmployeeRole('admin')
         }
       } catch (error) {
         console.error('Error fetching employee role:', error)
@@ -75,9 +93,7 @@ export default function Home() {
       }
     }
 
-    if (session?.user) {
-      fetchEmployeeRole()
-    }
+    fetchEmployeeRole()
   }, [session, isPending, router])
 
   // Check if user has access to the current tab

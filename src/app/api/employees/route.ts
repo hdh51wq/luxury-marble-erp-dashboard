@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
+    // CRITICAL FIX: Hash password using bcrypt with 10 salt rounds (better-auth default)
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Generate IDs for better-auth integration
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     });
 
-    // Create account record for better-auth
+    // Create account record for better-auth with proper bcrypt hash
     await db.insert(account).values({
       id: accountId,
       accountId: sanitizedEmail,
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       accessTokenExpiresAt: null,
       refreshTokenExpiresAt: null,
       scope: null,
-      password: hashedPassword,
+      password: hashedPassword, // Bcrypt hash format: $2b$10$...
       createdAt: now,
       updatedAt: now,
     });
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     const insertData: any = {
       name: sanitizedName,
       email: sanitizedEmail,
-      password: hashedPassword,
+      password: hashedPassword, // Store same bcrypt hash
       department: department.trim(),
       role: role.trim(),
       workingHours: workingHours ?? 0,
@@ -281,7 +281,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (password !== undefined) {
-      // Hash new password
+      // CRITICAL FIX: Hash new password using bcrypt with 10 salt rounds (better-auth default)
       newHashedPassword = await bcrypt.hash(password, 10);
       updateData.password = newHashedPassword;
       needsAccountUpdate = true;
@@ -320,8 +320,8 @@ export async function PUT(request: NextRequest) {
       .where(eq(employees.id, parseInt(id)))
       .returning();
 
-    // Update user record if needed
-    if (needsUserUpdate) {
+    // Update user and account records if needed
+    if (needsUserUpdate || needsAccountUpdate) {
       const existingUser = await db
         .select()
         .from(user)
@@ -329,26 +329,29 @@ export async function PUT(request: NextRequest) {
         .limit(1);
 
       if (existingUser.length > 0) {
-        const userUpdateData: any = {
-          updatedAt: Date.now(),
-        };
+        // Update user record if needed
+        if (needsUserUpdate) {
+          const userUpdateData: any = {
+            updatedAt: Date.now(),
+          };
 
-        if (name !== undefined) {
-          userUpdateData.name = name.trim();
+          if (name !== undefined) {
+            userUpdateData.name = name.trim();
+          }
+
+          if (email !== undefined) {
+            userUpdateData.email = email.trim().toLowerCase();
+          }
+
+          if (avatar !== undefined) {
+            userUpdateData.image = avatar ? avatar.trim() : null;
+          }
+
+          await db
+            .update(user)
+            .set(userUpdateData)
+            .where(eq(user.id, existingUser[0].id));
         }
-
-        if (email !== undefined) {
-          userUpdateData.email = email.trim().toLowerCase();
-        }
-
-        if (avatar !== undefined) {
-          userUpdateData.image = avatar ? avatar.trim() : null;
-        }
-
-        await db
-          .update(user)
-          .set(userUpdateData)
-          .where(eq(user.id, existingUser[0].id));
 
         // Update account record if email or password changed
         if (needsAccountUpdate) {
@@ -361,7 +364,7 @@ export async function PUT(request: NextRequest) {
           }
 
           if (newHashedPassword !== undefined) {
-            accountUpdateData.password = newHashedPassword;
+            accountUpdateData.password = newHashedPassword; // Bcrypt hash format
           }
 
           await db
