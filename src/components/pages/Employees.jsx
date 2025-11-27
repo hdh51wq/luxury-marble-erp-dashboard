@@ -4,15 +4,22 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
-import { Search, Mail, Phone, MapPin, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, Mail, Phone, MapPin, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import AddEmployeeDialog from '@/components/AddEmployeeDialog'
+import EditEmployeeDialog from '@/components/EditEmployeeDialog'
+import DeleteEmployeeDialog from '@/components/DeleteEmployeeDialog'
 import { toast } from 'sonner'
 
 export default function Employees() {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [editEmployee, setEditEmployee] = useState(null)
+  const [deleteEmployee, setDeleteEmployee] = useState(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const fetchEmployees = async () => {
     try {
@@ -24,7 +31,6 @@ export default function Employees() {
         throw new Error(data.error || 'Failed to fetch employees')
       }
       
-      // Data is already an array from Drizzle route
       setEmployees(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching employees:', error)
@@ -42,11 +48,29 @@ export default function Employees() {
     setEmployees([...employees, newEmployee])
   }
 
+  const handleEmployeeUpdated = (updatedEmployee) => {
+    setEmployees(employees.map(emp => 
+      emp.id === updatedEmployee.id ? updatedEmployee : emp
+    ))
+  }
+
+  const handleEmployeeDeleted = (deletedId) => {
+    setEmployees(employees.filter(emp => emp.id !== deletedId))
+  }
+
+  const openEditDialog = (employee) => {
+    setEditEmployee(employee)
+    setEditDialogOpen(true)
+  }
+
+  const openDeleteDialog = (employee) => {
+    setDeleteEmployee(employee)
+    setDeleteDialogOpen(true)
+  }
+
   const filteredEmployees = employees.filter(emp => {
-    // Skip undefined or null employees
     if (!emp) return false
     
-    // Safely check each property with default empty strings
     const name = (emp.name || '').toLowerCase()
     const email = (emp.email || '').toLowerCase()
     const role = (emp.role || '').toLowerCase()
@@ -142,6 +166,24 @@ export default function Employees() {
                     active
                   </span>
                 </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => openEditDialog(employee)}
+                    className="h-8 w-8"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => openDeleteDialog(employee)}
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3 mb-4">
@@ -196,6 +238,26 @@ export default function Employees() {
             </BarChart>
           </ResponsiveContainer>
         </Card>
+      )}
+
+      {/* Edit Dialog */}
+      {editEmployee && (
+        <EditEmployeeDialog
+          employee={editEmployee}
+          open={editDialogOpen}
+          setOpen={setEditDialogOpen}
+          onEmployeeUpdated={handleEmployeeUpdated}
+        />
+      )}
+
+      {/* Delete Dialog */}
+      {deleteEmployee && (
+        <DeleteEmployeeDialog
+          employee={deleteEmployee}
+          open={deleteDialogOpen}
+          setOpen={setDeleteDialogOpen}
+          onEmployeeDeleted={handleEmployeeDeleted}
+        />
       )}
     </div>
   )
