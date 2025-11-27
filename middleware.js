@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
  
 export async function middleware(request) {
-	// Get session from cookies (better-auth automatically handles this)
+	// Get session - works with both cookies and bearer tokens
 	const session = await auth.api.getSession({
 		headers: request.headers
-	})
+	});
  
 	if(!session) {
 		return NextResponse.redirect(new URL("/sign-in", request.url));
@@ -16,5 +16,5 @@ export async function middleware(request) {
  
 export const config = {
   runtime: "nodejs",
-  matcher: ["/"], // Protect dashboard route
+  matcher: [], // No routes protected by middleware - using client-side auth instead
 };

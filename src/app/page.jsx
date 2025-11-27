@@ -17,45 +17,81 @@ import { ShieldAlert } from 'lucide-react'
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [employeeRole, setEmployeeRole] = useState(null)
+  const [isLoadingRole, setIsLoadingRole] = useState(true)
   const { data: session, isPending } = useSession()
   const router = useRouter()
 
   useEffect(() => {
-    // Check for employee login
-    const role = localStorage.getItem('employee_role')
-    const employeeData = localStorage.getItem('employee_data')
-    
-    if (role) {
-      setEmployeeRole(role)
-      // Set default page based on role
-      if (role === 'stock') {
-        setActiveTab('inventory')
-      } else if (role === 'production') {
-        setActiveTab('production')
-      } else if (role === 'ventes') {
-        setActiveTab('sales')
-      } else if (role === 'admin') {
-        setActiveTab('dashboard')
-      }
-    } else if (!isPending && !session?.user) {
-      // No admin session and no employee login - redirect to login
+    if (!isPending && !session?.user) {
+      // No session - redirect to login
       router.push('/sign-in')
+      return
+    }
+
+    // Fetch employee role from database using session email
+    const fetchEmployeeRole = async () => {
+      if (!session?.user?.email) {
+        setIsLoadingRole(false)
+        return
+      }
+
+      try {
+        const token = localStorage.getItem('bearer_token')
+        const response = await fetch(`/api/employees?search=${encodeURIComponent(session.user.email)}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (response.ok) {
+          const employees = await response.json()
+          if (employees.length > 0) {
+            const userRole = employees[0].role
+            setEmployeeRole(userRole)
+            
+            // Set default page based on role
+            if (userRole === 'stock') {
+              setActiveTab('inventory')
+            } else if (userRole === 'production') {
+              setActiveTab('production')
+            } else if (userRole === 'ventes') {
+              setActiveTab('sales')
+            } else if (userRole === 'admin') {
+              setActiveTab('dashboard')
+            } else {
+              setActiveTab('dashboard')
+            }
+          } else {
+            // User exists in auth but not in employees table - treat as admin
+            setEmployeeRole('admin')
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching employee role:', error)
+        // Default to admin if error
+        setEmployeeRole('admin')
+      } finally {
+        setIsLoadingRole(false)
+      }
+    }
+
+    if (session?.user) {
+      fetchEmployeeRole()
     }
   }, [session, isPending, router])
 
   // Check if user has access to the current tab
   const hasAccess = (tabId) => {
     if (!employeeRole) {
-      // Admin has access to everything
       return true
     }
 
     const rolePermissions = {
       admin: ['dashboard', 'inventory', 'production', 'employees', 'sales', 'analytics', 'settings'],
       stock: ['inventory'],
-      production: ['production'],
-      ventes: ['sales'],
-      employe: []
+      production: ['production', 'dashboard', 'analytics'],
+      ventes: ['sales', 'dashboard', 'analytics'],
+      employe: ['dashboard', 'analytics']
     }
 
     return rolePermissions[employeeRole]?.includes(tabId) || false
@@ -65,13 +101,10 @@ export default function Home() {
   const handleTabChange = (tabId) => {
     if (hasAccess(tabId)) {
       setActiveTab(tabId)
-    } else {
-      // User doesn't have access - stay on current page
-      return
     }
   }
 
-  if (isPending) {
+  if (isPending || isLoadingRole) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
@@ -79,7 +112,7 @@ export default function Home() {
     )
   }
 
-  if (!session?.user && !employeeRole) {
+  if (!session?.user) {
     return null
   }
 
@@ -120,7 +153,7 @@ export default function Home() {
   }
 
   return (
-    <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange}>
+    <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} employeeRole={employeeRole}>
       {renderPage()}
     </DashboardLayout>
   )

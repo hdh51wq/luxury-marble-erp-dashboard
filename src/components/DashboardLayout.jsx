@@ -35,32 +35,27 @@ const allNavigation = [
   { id: 'settings', name: 'Settings', icon: Settings, allowedRoles: ['admin'] },
 ]
 
-export default function DashboardLayout({ children, activeTab, onTabChange }) {
+export default function DashboardLayout({ children, activeTab, onTabChange, employeeRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
-  const [employeeRole, setEmployeeRole] = useState(null)
   const { data: session, refetch } = useSession()
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is logged in as employee
-    const role = localStorage.getItem('employee_role')
-    setEmployeeRole(role)
-    
-    // If employee has specific role, redirect to their default page if needed
-    if (role && role !== 'admin') {
-      const defaultPage = role === 'stock' ? 'inventory' 
-                        : role === 'production' ? 'production'
-                        : role === 'ventes' ? 'sales'
+    // If employee has specific role, check if current page is accessible
+    if (employeeRole && employeeRole !== 'admin') {
+      const defaultPage = employeeRole === 'stock' ? 'inventory' 
+                        : employeeRole === 'production' ? 'production'
+                        : employeeRole === 'ventes' ? 'sales'
                         : 'dashboard' // For 'employe' role
       
       // Check if current page is accessible for this role
       const currentNavItem = allNavigation.find(item => item.id === activeTab)
-      if (currentNavItem && !currentNavItem.allowedRoles.includes(role)) {
+      if (currentNavItem && !currentNavItem.allowedRoles.includes(employeeRole)) {
         onTabChange(defaultPage)
       }
     }
-  }, [activeTab])
+  }, [activeTab, employeeRole])
 
   // Filter navigation based on role
   const navigation = employeeRole 
@@ -73,32 +68,18 @@ export default function DashboardLayout({ children, activeTab, onTabChange }) {
   }
 
   const handleSignOut = async () => {
-    // Check if employee is logged in
-    const employeeData = localStorage.getItem('employee_data')
-    
-    if (employeeData) {
-      // Employee logout
-      localStorage.removeItem('employee_role')
-      localStorage.removeItem('employee_data')
-      router.push('/employee-login')
-      toast.success("Déconnexion réussie")
+    const { error } = await authClient.signOut()
+    if (error?.code) {
+      toast.error(error.code)
     } else {
-      // Admin logout
-      const { error } = await authClient.signOut()
-      if (error?.code) {
-        toast.error(error.code)
-      } else {
-        localStorage.removeItem("bearer_token")
-        refetch()
-        router.push("/sign-in")
-        toast.success("Signed out successfully")
-      }
+      localStorage.removeItem("bearer_token")
+      refetch()
+      router.push("/sign-in")
+      toast.success("Signed out successfully")
     }
   }
 
-  // Get user data (admin or employee)
-  const employeeData = employeeRole ? JSON.parse(localStorage.getItem('employee_data') || '{}') : null
-  const currentUser = employeeData || session?.user
+  const currentUser = session?.user
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
