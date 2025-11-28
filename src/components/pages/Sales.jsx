@@ -39,7 +39,8 @@ export default function Sales() {
     email: '',
     phone: '',
     address: '',
-    status: 'active'
+    status: 'active',
+    totalRevenue: ''
   })
   
   const [noteFormData, setNoteFormData] = useState({
@@ -110,10 +111,24 @@ export default function Sales() {
       
       const method = editingClient ? 'PUT' : 'POST'
 
+      const payload = {
+        name: formData.name,
+        company: formData.company,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        status: formData.status
+      }
+
+      // Only include totalRevenue if it has a value
+      if (formData.totalRevenue && formData.totalRevenue !== '') {
+        payload.totalRevenue = Math.round(parseFloat(formData.totalRevenue) * 100)
+      }
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
@@ -247,7 +262,8 @@ export default function Sales() {
       email: client.email,
       phone: client.phone,
       address: client.address || '',
-      status: client.status
+      status: client.status,
+      totalRevenue: ((client.totalRevenue || 0) / 100).toString()
     })
     setClientDialogOpen(true)
   }
@@ -269,7 +285,8 @@ export default function Sales() {
       email: '',
       phone: '',
       address: '',
-      status: 'active'
+      status: 'active',
+      totalRevenue: ''
     })
     setEditingClient(null)
   }
@@ -518,17 +535,31 @@ export default function Sales() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalRevenue">Total Revenue (€K)</Label>
+                <Input
+                  id="totalRevenue"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData.totalRevenue}
+                  onChange={(e) => setFormData({...formData, totalRevenue: e.target.value})}
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-2">
@@ -580,7 +611,7 @@ export default function Sales() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Total Revenue:</span>
-                    <p className="font-bold text-orange-500">€{((selectedClient?.totalRevenue || 0) / 100).toLocaleString()}</p>
+                    <p className="font-bold text-orange-500">€{((selectedClient?.totalRevenue || 0) / 100).toLocaleString()}K</p>
                   </div>
                 </div>
               </Card>
@@ -893,7 +924,7 @@ export default function Sales() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {deletingItem?.name}. This action cannot be undone.
+              This will permanently delete {deletingItem?.name} and all associated projects and notes. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

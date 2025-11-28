@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { clients } from '@/db/schema';
+import { clients, projects, clientNotes } from '@/db/schema';
 import { eq, like, or } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -247,6 +247,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
+    // Delete related records first to avoid foreign key constraint errors
+    await db.delete(clientNotes)
+      .where(eq(clientNotes.clientId, parseInt(id)));
+    
+    await db.delete(projects)
+      .where(eq(projects.clientId, parseInt(id)));
+
+    // Now delete the client
     const deleted = await db.delete(clients)
       .where(eq(clients.id, parseInt(id)))
       .returning();
